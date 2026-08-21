@@ -1,0 +1,37 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\HrSuite.Core\HrSuite.Core.csproj" />
+    <ProjectReference Include="..\HrSuite.Common\HrSuite.Common.csproj" />
+    <ProjectReference Include="..\HrSuite.Infrastructure\HrSuite.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MailKit" Version="4.17.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+
+    <!--
+      A plugin is deployed as a self-contained FOLDER and loaded through
+      PluginLoadContext, not resolved from the host's bin. Its private NuGet
+      dependencies must therefore sit beside it. A class library does not copy
+      package assemblies to its own output by default, so without this the folder
+      holds the plugin and nothing it needs: the module loads, registers, routes -
+      and then throws FileNotFoundException the first time a request reaches the
+      code that uses the package.
+
+      PluginProjectFileTests asserts every plugin sets this, because the failure
+      only shows up at runtime, on the one endpoint that touches the dependency.
+    -->
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

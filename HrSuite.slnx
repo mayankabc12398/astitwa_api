@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="HrSuite.Addons.Payroll/HrSuite.Addons.Payroll.csproj" />
+  <Project Path="HrSuite.API/HrSuite.API.csproj" />
+  <Project Path="HrSuite.ArchitectureTests/HrSuite.ArchitectureTests.csproj" />
+  <Project Path="HrSuite.Common/HrSuite.Common.csproj" />
+  <Project Path="HrSuite.Configuration/HrSuite.Configuration.csproj" />
+  <Project Path="HrSuite.Core/HrSuite.Core.csproj" />
+  <Project Path="HrSuite.Extensions.Engine/HrSuite.Extensions.Engine.csproj" />
+  <Project Path="HrSuite.Infrastructure/HrSuite.Infrastructure.csproj" />
+  <Project Path="HrSuite.Integrations.Email/HrSuite.Integrations.Email.csproj" />
+</Solution>

@@ -1,0 +1,57 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>hrsuite-api-2f4c1a</UserSecretsId>
+    <PreserveCompilationContext>true</PreserveCompilationContext>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <!--
+    Layer 1 + Layer 2 only. The API host is base code, so it may not name a
+    Layer 3/4/5 type. See HrSuite.ArchitectureTests/DependencyRuleTests.cs.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\HrSuite.Core\HrSuite.Core.csproj" />
+    <ProjectReference Include="..\HrSuite.Common\HrSuite.Common.csproj" />
+    <ProjectReference Include="..\HrSuite.Infrastructure\HrSuite.Infrastructure.csproj" />
+    <ProjectReference Include="..\HrSuite.Configuration\HrSuite.Configuration.csproj" />
+  </ItemGroup>
+
+  <!--
+    Layers 3, 4 and 5 are built before the host and dropped into plugins\<Name>\,
+    but ReferenceOutputAssembly="false" means no compile-time reference exists.
+    PluginLoader discovers them at startup; a developer cannot write a `using`
+    for them even by accident.
+  -->
+  <ItemGroup>
+    <PluginProject Include="..\HrSuite.Addons.Payroll\HrSuite.Addons.Payroll.csproj" />
+    <PluginProject Include="..\HrSuite.Integrations.Email\HrSuite.Integrations.Email.csproj" />
+    <PluginProject Include="..\HrSuite.Extensions.Engine\HrSuite.Extensions.Engine.csproj" />
+    <ProjectReference Include="@(PluginProject)" ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+
+  <Target Name="CopyPluginAssemblies" AfterTargets="Build">
+    <ItemGroup>
+      <PluginPayload Include="%(PluginProject.RootDir)%(PluginProject.Directory)bin\$(Configuration)\$(TargetFramework)\**\*.*" Exclude="%(PluginProject.RootDir)%(PluginProject.Directory)bin\$(Configuration)\$(TargetFramework)\**\*.pdb">
+        <PluginName>%(PluginProject.Filename)</PluginName>
+      </PluginPayload>
+    </ItemGroup>
+    <Copy SourceFiles="@(PluginPayload)" DestinationFolder="$(OutDir)plugins\%(PluginPayload.PluginName)\%(PluginPayload.RecursiveDir)" SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Plugins copied to $(OutDir)plugins\" />
+  </Target>
+
+  <Target Name="CopyPluginAssembliesOnPublish" AfterTargets="Publish" DependsOnTargets="CopyPluginAssemblies">
+    <ItemGroup>
+      <PublishPluginPayload Include="$(OutDir)plugins\**\*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(PublishPluginPayload)" DestinationFolder="$(PublishDir)plugins\%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>
