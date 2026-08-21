@@ -271,19 +271,43 @@ public sealed class ScriptHost
     {
         var result = HookResult.Empty();
 
-        // The script may also have edited ctx.form directly; carry both back.
-        var form = ReadDictionary(engine.Evaluate("ctx.form"), engine);
-        if (form is { Count: > 0 }) result.Form = form!;
+        // The script may have edited ctx.form directly through ctx.setForm(); start there.
+        var form = ReadDictionary(engine.Evaluate("ctx.form"), engine)
+                   ?? new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
 
-        if (returned.IsNull() || returned.IsUndefined() || !returned.IsObject()) return result;
+        if (returned.IsNull() || returned.IsUndefined() || !returned.IsObject())
+        {
+            if (form.Count > 0) result.Form = form;
+            return result;
+        }
 
         var payload = ReadDictionary(returned, engine);
-        if (payload is null) return result;
+        if (payload is null)
+        {
+            if (form.Count > 0) result.Form = form;
+            return result;
+        }
 
         if (payload.TryGetValue("cancelSave", out var cancelSave)) result.CancelSave = AsBool(cancelSave);
         if (payload.TryGetValue("cancelNavigation", out var cancelNav)) result.CancelNavigation = AsBool(cancelNav);
         if (payload.TryGetValue("redirectTo", out var redirect)) result.RedirectTo = redirect?.ToString();
         if (payload.TryGetValue("message", out var message)) result.Message = message?.ToString();
+
+        // Fields the script returned, which the contract has always advertised:
+        //
+        //     return { form: { netSalary: 1234 } }
+        //
+        // Reading only ctx.form meant a script could compute a value, return it, get an
+        // ok result — and have the answer silently discarded. The returned form wins over
+        // the ctx.form snapshot: it is the script's last word on the subject.
+        if (payload.TryGetValue("form", out var returnedForm)
+            && returnedForm is JsonElement { ValueKind: JsonValueKind.Object } element)
+        {
+            foreach (var property in element.EnumerateObject())
+                form[property.Name] = property.Value;   // JsonElement, as ReadDictionary yields
+        }
+
+        if (form.Count > 0) result.Form = form;
 
         return result;
     }

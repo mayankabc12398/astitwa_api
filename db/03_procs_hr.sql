@@ -300,6 +300,10 @@ BEGIN
          mobile,
          email,
          employment_status,
+         gross_ctc,
+         hra,
+         tds,
+         net_salary,
          is_active
   FROM   hr_employee
   WHERE  tenant_id   = p_tenant_id
@@ -337,7 +341,11 @@ CREATE PROCEDURE sp_hr_employee_save (
   IN p_reporting_manager_id INT,
   IN p_mobile               VARCHAR(30),
   IN p_email                VARCHAR(150),
-  IN p_employment_status    VARCHAR(30)
+  IN p_employment_status    VARCHAR(30),
+  IN p_gross_ctc            DECIMAL(14,2),
+  IN p_hra                  DECIMAL(14,2),
+  IN p_tds                  DECIMAL(14,2),
+  IN p_net_salary           DECIMAL(14,2)
 )
 BEGIN
   DECLARE v_id INT;
@@ -346,10 +354,13 @@ BEGIN
     INSERT INTO hr_employee
           (tenant_id, employee_code, full_name, dob, date_of_joining, department_id,
            designation_id, reporting_manager_id, mobile, email, employment_status,
+           gross_ctc, hra, tds, net_salary,
            created_by, created_on)
     VALUES (p_tenant_id, p_employee_code, p_full_name, p_dob, p_date_of_joining, p_department_id,
             p_designation_id, p_reporting_manager_id, p_mobile, p_email,
-            IFNULL(p_employment_status, 'Active'), p_user_id, UTC_TIMESTAMP());
+            IFNULL(p_employment_status, 'Active'),
+            p_gross_ctc, p_hra, p_tds, p_net_salary,
+            p_user_id, UTC_TIMESTAMP());
     SET v_id = LAST_INSERT_ID();
   ELSE
     UPDATE hr_employee
@@ -363,6 +374,10 @@ BEGIN
            mobile               = p_mobile,
            email                = p_email,
            employment_status    = IFNULL(p_employment_status, employment_status),
+           gross_ctc            = p_gross_ctc,
+           hra                  = p_hra,
+           tds                  = p_tds,
+           net_salary           = p_net_salary,
            updated_by           = p_user_id,
            updated_on           = UTC_TIMESTAMP()
     WHERE  tenant_id   = p_tenant_id
@@ -371,7 +386,8 @@ BEGIN
   END IF;
 
   SELECT employee_id, employee_code, full_name, dob, date_of_joining, department_id,
-         designation_id, reporting_manager_id, mobile, email, employment_status, is_active
+         designation_id, reporting_manager_id, mobile, email, employment_status,
+         gross_ctc, hra, tds, net_salary, is_active
   FROM   hr_employee
   WHERE  tenant_id = p_tenant_id AND employee_id = v_id;
 END$$

@@ -27,6 +27,44 @@ public class ScriptSandboxTests
     };
 
     [Fact]
+    public void A_script_can_return_calculated_fields_in_form()
+    {
+        // The contract has always advertised `return { form: { ... } }`, but the result was
+        // built from ctx.form alone — so a script could compute a value, return it, be
+        // reported ok, and have the answer silently dropped. Nothing said so; the field just
+        // stayed empty. This is the guard.
+        var form = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["grossCtc"] = "1000000"
+        };
+
+        var outcome = Host().Run(
+            "var gross = Number(ctx.form.grossCtc) || 0;" +
+            "var tds = Math.round(gross * 0.1 * 100) / 100;" +
+            "return { form: { tds: tds, netSalary: gross - tds } };",
+            Context(form), CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.NotNull(outcome.Result.Form);
+        Assert.Equal("100000", outcome.Result.Form!["tds"]?.ToString());
+        Assert.Equal("900000", outcome.Result.Form!["netSalary"]?.ToString());
+
+        // Untouched fields survive: a returned form adds to the record, it does not replace it.
+        Assert.Equal("1000000", outcome.Result.Form!["grossCtc"]?.ToString());
+    }
+
+    [Fact]
+    public void A_returned_form_wins_over_the_same_field_set_with_setForm()
+    {
+        var outcome = Host().Run(
+            "ctx.setForm('hra', 1); return { form: { hra: 2 } };",
+            Context(), CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.Equal("2", outcome.Result.Form!["hra"]?.ToString());
+    }
+
+    [Fact]
     public void An_empty_script_returns_an_empty_result()
     {
         var outcome = Host().Run("", Context(), CancellationToken.None);

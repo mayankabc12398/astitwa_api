@@ -53,6 +53,15 @@ public sealed class Employee
     public string? Mobile { get; set; }
     public string? Email { get; set; }
     public string EmploymentStatus { get; set; } = "Active";
+
+    // Compensation. decimal, not double: money must not carry binary rounding error.
+    // All nullable — a tenant that does not track pay here leaves them empty, and
+    // cfg_field_rule hides the inputs rather than the product pretending they are zero.
+    public decimal? GrossCtc { get; set; }
+    public decimal? Hra { get; set; }
+    public decimal? Tds { get; set; }
+    public decimal? NetSalary { get; set; }
+
     public bool IsActive { get; set; } = true;
 }
 

@@ -33,7 +33,11 @@ public sealed class EmployeeRepository : RepositoryBase, IEmployeeRepository
                 .Set("reporting_manager_id", NullIfZero(employee.ReportingManagerId))
                 .Set("mobile", employee.Mobile)
                 .Set("email", employee.Email)
-                .Set("employment_status", employee.EmploymentStatus),
+                .Set("employment_status", employee.EmploymentStatus)
+                .Set("gross_ctc", employee.GrossCtc)
+                .Set("hra", employee.Hra)
+                .Set("tds", employee.Tds)
+                .Set("net_salary", employee.NetSalary),
             ct);
 
     public Task DeleteAsync(int employeeId, CancellationToken ct = default)

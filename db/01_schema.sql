@@ -167,6 +167,13 @@ CREATE TABLE IF NOT EXISTS hr_employee (
   mobile               VARCHAR(30)  NULL,
   email                VARCHAR(150) NULL,
   employment_status    VARCHAR(30)  NOT NULL DEFAULT 'Active',
+  -- Compensation. Nullable throughout: a tenant that does not track pay here simply
+  -- hides these on the Employee screen with a cfg_field_rule row, and the columns stay
+  -- empty. DECIMAL, never FLOAT - money must not carry binary rounding error.
+  gross_ctc            DECIMAL(14,2) NULL,
+  hra                  DECIMAL(14,2) NULL,
+  tds                  DECIMAL(14,2) NULL,
+  net_salary           DECIMAL(14,2) NULL,
   is_active            BIT          NOT NULL DEFAULT 1,
   created_by           INT          NULL,
   created_on           DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,

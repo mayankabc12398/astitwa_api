@@ -32,19 +32,35 @@ public sealed class ScriptHookController : ExtensionControllerBase
         _tenant = tenant;
     }
 
-    /// <summary>The slots base code compiled in. The editor offers these rather than free text.</summary>
+    /// <summary>
+    /// The slots base code compiled in. The editor offers these rather than free text.
+    ///
+    /// Screens now carry their own slots and their own field list, so the editor can ask
+    /// which page first and then offer only what that page actually has — including a
+    /// concrete slot per field, rather than a hr.employee.field.&lt;fieldKey&gt;.onBlur
+    /// placeholder the author has to hand-edit.
+    ///
+    /// HookKeys is still returned unchanged: it is what the free-text field falls back to,
+    /// and a hook key outside this catalogue must keep working.
+    /// </summary>
     [HttpGet("slots")]
     public IActionResult Slots() => Data(new
     {
         HookKeys = HookKeys.All,
         RunTargets = new[] { RunTarget.Client, RunTarget.Server },
-        Screens = new[]
+        FieldSlotSuffix = ScreenCatalog.FieldSlotSuffix,
+        Screens = ScreenCatalog.Screens.Select(screen => new
         {
-            new { Key = "hr.employee", Label = "Employee" },
-            new { Key = "hr.leaveRequest", Label = "Leave request" },
-            new { Key = "hr.department", Label = "Department" },
-            new { Key = "hr.designation", Label = "Designation" }
-        }
+            screen.Key,
+            screen.Label,
+            Slots = screen.Slots.Select(slot => new { slot.Key, slot.Label }),
+            Fields = screen.Fields.Select(field => new
+            {
+                field.Key,
+                field.Label,
+                SlotKey = ScreenCatalog.FieldSlotKey(screen.Key, field.Key)
+            })
+        })
     });
 
     [HttpGet]
