@@ -16,6 +16,29 @@ public class SourceConventionTests
         "HrSuite.Integrations.Email", "HrSuite.Extensions.Engine"
     };
 
+    /// <summary>
+    /// The API Builder, and nothing else.
+    ///
+    /// "Stored procedures only" exists so that no ordinary data path can be talked into
+    /// running text. These two files ARE the exception the product decided to make: the
+    /// statement is written by an administrator and stored as a row, which is the whole
+    /// feature. Naming them here keeps the rule enforced everywhere else — a third file
+    /// that starts building SQL still fails, which is the point of listing them rather
+    /// than exempting the folder.
+    ///
+    /// What stands in for the rule in these two is in SqlGuard: one read-only statement,
+    /// bound parameters only, a mandatory tenant token, and a READ ONLY transaction
+    /// around the run.
+    /// </summary>
+    private static readonly string[] SqlTextExemptions =
+    {
+        Path.Combine("HrSuite.Extensions.Engine", "Runtime", "SqlGuard.cs"),
+        Path.Combine("HrSuite.Extensions.Engine", "Runtime", "CustomApiRunner.cs")
+    };
+
+    private static bool IsExempt(string path)
+        => SqlTextExemptions.Any(e => path.EndsWith(e, StringComparison.OrdinalIgnoreCase));
+
     private static IEnumerable<(string Path, string Text)> SourceFiles(params string[] folders)
     {
         foreach (var folder in folders)
@@ -41,7 +64,7 @@ public class SourceConventionTests
             RegexOptions.Compiled);
 
         var offenders = SourceFiles(ProjectFolders)
-            .Where(f => sql.IsMatch(f.Text))
+            .Where(f => sql.IsMatch(f.Text) && !IsExempt(f.Path))
             .Select(f => f.Path)
             .ToArray();
 
@@ -54,7 +77,7 @@ public class SourceConventionTests
     public void No_project_executes_a_command_as_raw_text()
     {
         var offenders = SourceFiles(ProjectFolders)
-            .Where(f => f.Text.Contains("CommandType.Text", StringComparison.Ordinal))
+            .Where(f => f.Text.Contains("CommandType.Text", StringComparison.Ordinal) && !IsExempt(f.Path))
             .Select(f => f.Path)
             .ToArray();
 

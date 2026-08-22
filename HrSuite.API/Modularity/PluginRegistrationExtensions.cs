@@ -1,4 +1,4 @@
-using HrSuite.Core.Modularity;
+﻿using HrSuite.Core.Modularity;
 
 namespace HrSuite.API.Modularity;
 
@@ -55,6 +55,7 @@ public static class BaseMenu
         new MenuEntry("admin.fieldBuilder","Field Builder",  "/hr/field-builder",  "sliders",   810, null, "admin.customField"),
         new MenuEntry("admin.hooks",     "Script Hooks",     "/admin/hooks",       "code",      900, null, "admin.extensions"),
         new MenuEntry("admin.queries",   "Named Queries",    "/admin/queries",     "database",  910, null, "admin.extensions"),
+        new MenuEntry("admin.apiBuilder","API Builder",      "/admin/apis",        "plug",      915, null, "admin.extensions"),
         new MenuEntry("admin.hookLog",   "Hook Log",         "/admin/hook-log",    "list",      920, null, "admin.extensions")
     };
 }

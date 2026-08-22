@@ -28,8 +28,13 @@ public sealed class ExtensionEngineModule : IPluginModule
         services.AddScoped<ScriptHookRepository>();
         services.AddScoped<NamedQueryRepository>();
         services.AddScoped<HookLogRepository>();
+        services.AddScoped<CustomApiRepository>();
 
         services.AddScoped<INamedQueryRunner, NamedQueryRunner>();
+
+        // Not behind an interface in Core: base code has no business calling an endpoint an
+        // administrator wrote, and declaring the type there would invite it to.
+        services.AddScoped<CustomApiRunner>();
         services.AddScoped<ScriptHost>();
 
         // Registered concretely as well, so the admin controller can reach Test() without
