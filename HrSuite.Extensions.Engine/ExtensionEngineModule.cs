@@ -37,6 +37,13 @@ public sealed class ExtensionEngineModule : IPluginModule
         services.AddScoped<CustomApiRunner>();
         services.AddScoped<ScriptHost>();
 
+        // The editor's assistant. Singleton because the Google access token it mints is good
+        // for an hour and worth keeping — scoped would mean a token exchange before every
+        // question, which doubles the wait for an answer.
+        services.Configure<VertexAiOptions>(configuration.GetSection(VertexAiOptions.SectionName));
+        services.AddHttpClient();
+        services.AddSingleton<VertexAiClient>();
+
         // Registered concretely as well, so the admin controller can reach Test() without
         // widening the interface base code depends on.
         services.AddScoped<JintHookEngine>();
