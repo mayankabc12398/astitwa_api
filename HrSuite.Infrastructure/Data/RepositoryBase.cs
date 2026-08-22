@@ -104,6 +104,24 @@ public abstract class RepositoryBase
         return (first, second);
     }
 
+    /// <summary>
+    /// Reads three result sets in one round trip. A print template is a tree — the template,
+    /// its blocks, then the fields inside those blocks — and fetching the three levels in
+    /// three calls would let a concurrent edit hand the caller blocks that no longer belong
+    /// to the template above them.
+    /// </summary>
+    protected async Task<(IReadOnlyList<T1> First, IReadOnlyList<T2> Second, IReadOnlyList<T3> Third)>
+        QueryThreeAsync<T1, T2, T3>(string procName, ProcArgs? args = null, CancellationToken ct = default)
+    {
+        using var connection = await _factory.OpenAsync(ct).ConfigureAwait(false);
+        using var grid = await connection.QueryMultipleAsync(Command(procName, args, ct)).ConfigureAwait(false);
+
+        var first = (await grid.ReadAsync<T1>().ConfigureAwait(false)).AsList();
+        var second = (await grid.ReadAsync<T2>().ConfigureAwait(false)).AsList();
+        var third = (await grid.ReadAsync<T3>().ConfigureAwait(false)).AsList();
+        return (first, second, third);
+    }
+
     // -----------------------------------------------------------------
     // Writes
     // -----------------------------------------------------------------

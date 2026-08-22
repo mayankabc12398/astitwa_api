@@ -15,11 +15,22 @@ public static class Permissions
     public const string LeaveView        = "hr.leave.view";
     public const string LeaveEdit        = "hr.leave.edit";
     public const string LeaveApprove     = "hr.leave.approve";
+    public const string DocumentView     = "hr.document.view";
+    public const string DocumentEdit     = "hr.document.edit";
+    /// <summary>
+    /// Separate from edit on purpose: preparing a draft and putting a letter in somebody's
+    /// hand are different acts, and many tenants hold the second one more tightly.
+    /// </summary>
+    public const string DocumentIssue    = "hr.document.issue";
 
     /// <summary>Gates the Layer 5 admin screens: script hooks, named queries, hook log.</summary>
     public const string AdminExtensions  = "admin.extensions";
     /// <summary>Gates module and integration switches.</summary>
     public const string AdminTenant      = "admin.tenant";
+    /// <summary>Gates the print designer. Reading a template is not gated by it.</summary>
+    public const string AdminPrintTemplate = "admin.printTemplate";
+    /// <summary>Gates the field builder. Reading the definitions is not gated by it.</summary>
+    public const string AdminCustomField   = "admin.customField";
 
     public static readonly IReadOnlyList<string> All = new[]
     {
@@ -27,6 +38,7 @@ public static class Permissions
         DesignationView, DesignationEdit,
         EmployeeView, EmployeeEdit,
         LeaveView, LeaveEdit, LeaveApprove,
-        AdminExtensions, AdminTenant
+        DocumentView, DocumentEdit, DocumentIssue,
+        AdminExtensions, AdminTenant, AdminPrintTemplate, AdminCustomField
     };
 }

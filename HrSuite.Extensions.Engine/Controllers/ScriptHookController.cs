@@ -24,12 +24,18 @@ public sealed class ScriptHookController : ExtensionControllerBase
     private readonly ScriptHookRepository _hooks;
     private readonly JintHookEngine _engine;
     private readonly ITenantContext _tenant;
+    private readonly ICustomFieldService _customFields;
 
-    public ScriptHookController(ScriptHookRepository hooks, JintHookEngine engine, ITenantContext tenant)
+    public ScriptHookController(
+        ScriptHookRepository hooks,
+        JintHookEngine engine,
+        ITenantContext tenant,
+        ICustomFieldService customFields)
     {
         _hooks = hooks;
         _engine = engine;
         _tenant = tenant;
+        _customFields = customFields;
     }
 
     /// <summary>
@@ -44,24 +50,67 @@ public sealed class ScriptHookController : ExtensionControllerBase
     /// and a hook key outside this catalogue must keep working.
     /// </summary>
     [HttpGet("slots")]
-    public IActionResult Slots() => Data(new
+    public async Task<IActionResult> Slots(CancellationToken ct)
     {
-        HookKeys = HookKeys.All,
-        RunTargets = new[] { RunTarget.Client, RunTarget.Server },
-        FieldSlotSuffix = ScreenCatalog.FieldSlotSuffix,
-        Screens = ScreenCatalog.Screens.Select(screen => new
+        // The compiled field list is a fact about the code. The tenant's own fields are rows
+        // in cfg_custom_field, added through Field Builder without a deployment — so the two
+        // are read from different places and joined here, tagged so the editor can say which
+        // is which. Without this half a tenant's fields are invisible to the hook editor.
+        var screens = new List<object>();
+
+        foreach (var screen in ScreenCatalog.Screens)
         {
-            screen.Key,
-            screen.Label,
-            Slots = screen.Slots.Select(slot => new { slot.Key, slot.Label }),
-            Fields = screen.Fields.Select(field => new
+            var fields = screen.Fields.Select(field => new
             {
                 field.Key,
                 field.Label,
+                Source = "compiled",
+                // SlotBase carries no event: the editor picks one from FieldEvents and joins
+                // the two. SlotKey stays alongside it, still onBlur, so an editor that has
+                // not been updated keeps working against the same payload.
+                SlotBase = ScreenCatalog.FieldSlotBase(screen.Key, field.Key),
                 SlotKey = ScreenCatalog.FieldSlotKey(screen.Key, field.Key)
-            })
-        })
-    });
+            }).ToList();
+
+            // A screen whose custom fields cannot be read still has to offer its compiled
+            // ones: the hook editor is not the place to fail over a Field Builder problem.
+            try
+            {
+                var custom = await _customFields.ListAsync(screen.Key, ct);
+                fields.AddRange(custom
+                    .Where(f => !fields.Any(c => c.Key == f.FieldKey))
+                    .Select(f => new
+                    {
+                        Key = f.FieldKey,
+                        f.Label,
+                        Source = "custom",
+                        SlotBase = ScreenCatalog.FieldSlotBase(screen.Key, f.FieldKey),
+                        SlotKey = ScreenCatalog.FieldSlotKey(screen.Key, f.FieldKey)
+                    }));
+            }
+            catch
+            {
+                // Compiled fields only for this screen.
+            }
+
+            screens.Add(new
+            {
+                screen.Key,
+                screen.Label,
+                Slots = screen.Slots.Select(slot => new { slot.Key, slot.Label }),
+                Fields = fields
+            });
+        }
+
+        return Data(new
+        {
+            HookKeys = HookKeys.All,
+            RunTargets = new[] { RunTarget.Client, RunTarget.Server },
+            FieldSlotSuffix = ScreenCatalog.FieldSlotSuffix,
+            FieldEvents = ScreenCatalog.FieldEvents.Select(e => new { e.Key, e.Label }),
+            Screens = screens
+        });
+    }
 
     [HttpGet]
     public async Task<IActionResult> List([FromQuery] PageRequest page, [FromQuery] string? runOn, CancellationToken ct)

@@ -39,12 +39,22 @@ public static class InfrastructureRegistration
         services.AddScoped<IDesignationRepository, DesignationRepository>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<ILeaveRepository, LeaveRepository>();
+        services.AddScoped<IDocumentRepository, DocumentRepository>();
+
+        // Screen configuration the tenant edits at run time: print templates, and the
+        // fields the product never compiled in. Layer 1 owns the CRUD; what the rows mean
+        // is the tenant's decision, which is the same split cfg_field_rule already has.
+        services.AddScoped<IPrintTemplateRepository, PrintTemplateRepository>();
+        services.AddScoped<ICustomFieldRepository, CustomFieldRepository>();
 
         services.AddScoped<HookInvoker>();
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IDesignationService, DesignationService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<ILeaveService, LeaveService>();
+        services.AddScoped<IDocumentService, DocumentService>();
+        services.AddScoped<IPrintTemplateService, PrintTemplateService>();
+        services.AddScoped<ICustomFieldService, CustomFieldService>();
 
         // Layer 4 boundary. Channels themselves are contributed by integration assemblies.
         services.AddScoped<INotificationDispatcher, NotificationDispatcher>();

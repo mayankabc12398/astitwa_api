@@ -45,3 +45,21 @@ public interface ILeaveRepository
     Task<LeaveRequestDetail?> DecideAsync(int leaveRequestId, string status, string? remark, int? approverEmployeeId, CancellationToken ct = default);
     Task<IReadOnlyList<LookupItem>> LeaveTypeLookupAsync(CancellationToken ct = default);
 }
+
+public interface IDocumentRepository
+{
+    Task<PagedResult<DocumentListItem>> ListAsync(
+        PageRequest page, string? status, int? employeeId, CancellationToken ct = default);
+
+    Task<Document?> GetAsync(int documentId, CancellationToken ct = default);
+    Task<Document?> SaveAsync(Document document, CancellationToken ct = default);
+    Task<Document?> SetStatusAsync(int documentId, string status, string? deliveredVia, string? payloadJson, CancellationToken ct = default);
+
+    /// <summary>The document, its employee and that employee's printable custom values.</summary>
+    Task<DocumentPrintContext?> PrintContextAsync(int documentId, CancellationToken ct = default);
+
+    /// <summary>Counts across the whole register, which a paged list cannot supply.</summary>
+    Task<DocumentStats> StatsAsync(CancellationToken ct = default);
+
+    Task DeleteAsync(int documentId, CancellationToken ct = default);
+}

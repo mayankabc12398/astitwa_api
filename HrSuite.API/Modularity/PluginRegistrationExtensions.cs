@@ -50,6 +50,9 @@ public static class BaseMenu
         new MenuEntry("hr.designation",  "Designations",     "/hr/designation",    "badge",     30,  null, "hr.designation.view"),
         new MenuEntry("hr.leave",        "Leave Requests",   "/hr/leave",          "calendar",  40,  null, "hr.leave.view"),
         new MenuEntry("hr.leaveApproval","Leave Approvals",  "/hr/leave/approval", "check",     50,  null, "hr.leave.approve"),
+        new MenuEntry("hr.documents",    "Documents",        "/hr/documents",      "file",      60,  null, "hr.document.view"),
+        new MenuEntry("admin.printDesigner","Print Designer","/hr/print-designer", "printer",   800, null, "admin.printTemplate"),
+        new MenuEntry("admin.fieldBuilder","Field Builder",  "/hr/field-builder",  "sliders",   810, null, "admin.customField"),
         new MenuEntry("admin.hooks",     "Script Hooks",     "/admin/hooks",       "code",      900, null, "admin.extensions"),
         new MenuEntry("admin.queries",   "Named Queries",    "/admin/queries",     "database",  910, null, "admin.extensions"),
         new MenuEntry("admin.hookLog",   "Hook Log",         "/admin/hook-log",    "list",      920, null, "admin.extensions")

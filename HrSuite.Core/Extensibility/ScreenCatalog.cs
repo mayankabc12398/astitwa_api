@@ -20,13 +20,31 @@ public static class ScreenCatalog
 
     public sealed record ScreenField(string Key, string Label);
 
+    public sealed record FieldEvent(string Key, string Label);
+
+    /// <summary>
+    /// The events a field slot can be bound to. A screen fires both: onBlur when the control
+    /// is left, onChange as the value is typed — the second is what debounce_ms is for.
+    ///
+    /// Adding an entry here advertises a slot to the editor, so nothing goes in this list
+    /// until a screen actually fires it. A hook nobody fires looks identical to a broken one.
+    /// </summary>
+    public static readonly IReadOnlyList<FieldEvent> FieldEvents = new FieldEvent[]
+    {
+        new("onBlur",   "On blur"),
+        new("onChange", "On change")
+    };
+
     public sealed record Screen(
         string Key,
         string Label,
         IReadOnlyList<HookSlot> Slots,
         IReadOnlyList<ScreenField> Fields);
 
-    /// <summary>Appended to a field key to form the per-field slot on a screen.</summary>
+    /// <summary>
+    /// The event assumed when a caller names none. onBlur rather than onChange because it is
+    /// the older of the two: a key built without an event has to keep meaning what it meant.
+    /// </summary>
     public const string FieldSlotSuffix = "onBlur";
 
     public static readonly IReadOnlyList<Screen> Screens = new[]
@@ -63,15 +81,56 @@ public static class ScreenCatalog
             "Leave request",
             new HookSlot[]
             {
+                new(HookKeys.LeaveRequestOnLoad,     "On load"),
                 new(HookKeys.LeaveRequestBeforeSave, "Before save"),
                 new(HookKeys.LeaveRequestAfterSave,  "After save")
             },
-            // The leave screen has no per-field slot compiled in, so it offers no fields.
-            // Listing them here would advertise hooks that never fire.
-            Array.Empty<ScreenField>())
+            new ScreenField[]
+            {
+                new("employeeId",  "Employee"),
+                new("leaveTypeId", "Leave type"),
+                new("fromDate",    "From"),
+                new("toDate",      "To"),
+                new("reason",      "Reason")
+            }),
+
+        new Screen(
+            "hr.department",
+            "Department",
+            new HookSlot[]
+            {
+                new(HookKeys.DepartmentOnLoad,     "On load"),
+                new(HookKeys.DepartmentBeforeSave, "Before save"),
+                new(HookKeys.DepartmentAfterSave,  "After save")
+            },
+            new ScreenField[]
+            {
+                new("deptCode", "Code"),
+                new("deptName", "Name")
+            }),
+
+        new Screen(
+            "hr.designation",
+            "Designation",
+            new HookSlot[]
+            {
+                new(HookKeys.DesignationOnLoad,     "On load"),
+                new(HookKeys.DesignationBeforeSave, "Before save"),
+                new(HookKeys.DesignationAfterSave,  "After save")
+            },
+            new ScreenField[]
+            {
+                new("desigCode", "Code"),
+                new("desigName", "Name"),
+                new("grade",     "Grade")
+            })
     };
 
+    /// <summary>hr.employee.field.grossCtc — the slot without its event.</summary>
+    public static string FieldSlotBase(string screenKey, string fieldKey)
+        => $"{screenKey}.field.{fieldKey}";
+
     /// <summary>hr.employee.field.grossCtc.onBlur</summary>
-    public static string FieldSlotKey(string screenKey, string fieldKey)
-        => $"{screenKey}.field.{fieldKey}.{FieldSlotSuffix}";
+    public static string FieldSlotKey(string screenKey, string fieldKey, string? eventKey = null)
+        => $"{FieldSlotBase(screenKey, fieldKey)}.{eventKey ?? FieldSlotSuffix}";
 }
