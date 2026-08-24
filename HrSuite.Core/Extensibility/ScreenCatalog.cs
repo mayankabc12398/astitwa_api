@@ -18,7 +18,22 @@ public static class ScreenCatalog
 {
     public sealed record HookSlot(string Key, string Label);
 
-    public sealed record ScreenField(string Key, string Label);
+    /// <summary>
+    /// One compiled field on a screen.
+    ///
+    /// Section and Seq exist for the Field Builder: a tenant adding a field has to be able to
+    /// say WHERE it goes, and "after Mobile Number, in Personal Details" is only answerable if
+    /// the compiled fields carry their own section and position. Seq is the same number the
+    /// screen passes to DynamicField as defaultSeq, so a custom field slotted between two of
+    /// them renders exactly where the author put it.
+    ///
+    /// Both are optional: a screen that has never been sectioned leaves them at their
+    /// defaults and the builder falls back to appending.
+    /// </summary>
+    public sealed record ScreenField(string Key, string Label, string? Section = null, int Seq = 0);
+
+    /// <summary>A band on the form — the card its fields are drawn inside.</summary>
+    public sealed record ScreenSection(string Key, string Label);
 
     public sealed record FieldEvent(string Key, string Label);
 
@@ -39,7 +54,8 @@ public static class ScreenCatalog
         string Key,
         string Label,
         IReadOnlyList<HookSlot> Slots,
-        IReadOnlyList<ScreenField> Fields);
+        IReadOnlyList<ScreenField> Fields,
+        IReadOnlyList<ScreenSection>? Sections = null);
 
     /// <summary>
     /// The event assumed when a caller names none. onBlur rather than onChange because it is
@@ -58,18 +74,87 @@ public static class ScreenCatalog
                 new(HookKeys.PatientBeforeSave, "Before save"),
                 new(HookKeys.PatientAfterSave,  "After save")
             },
+            // Every field the registration screen renders, so a script can be hung on any of
+            // them without its hook key being typed by hand, and so the Field Builder can offer
+            // "after this field, in that section" instead of a sequence number to guess at.
+            //
+            // fullName, mobile and address are absent although the columns still exist. They
+            // are derived by the save now, and offering a slot on a field the user cannot see
+            // would be advertising a hook that fires on nobody's keystroke.
             new ScreenField[]
             {
-                new("patientCode",  "UHID"),
-                new("fullName",     "Name"),
-                new("gender",       "Gender"),
-                new("dob",          "Date of birth"),
-                new("mobile",       "Mobile"),
-                new("email",        "Email"),
-                new("bloodGroup",   "Blood group"),
-                new("address",      "Address"),
-                new("city",         "City"),
-                new("registeredOn", "Registered on")
+                new("barcode",            "Barcode",               "personal", 10),
+                new("mobileNo",           "Mobile Number",         "personal", 20),
+                new("title",              "Title",                 "personal", 30),
+                new("firstName",          "First Name",            "personal", 40),
+                new("lastName",           "Last Name",             "personal", 50),
+                new("gender",             "Gender",                "personal", 60),
+                new("maritalStatus",      "Marital Status",        "personal", 70),
+                new("dob",                "DOB",                   "personal", 80),
+                new("age",                "Age",                   "personal", 90),
+                new("ageType",            "Type",                  "personal", 100),
+                new("email",              "EMAIL",                 "personal", 110),
+                new("localAddress",       "Local Address",         "personal", 120),
+                new("sameAsLocalAddress", "Same as local address", "personal", 130),
+                new("permanentAddress",   "PERMANENT ADDRESS",     "personal", 140),
+                new("country",            "Country",               "personal", 150),
+                new("state",              "State",                 "personal", 160),
+                new("district",           "District",              "personal", 170),
+                new("city",               "City",                  "personal", 180),
+                new("idProofName",        "Id Proof Name",         "personal", 190),
+                new("idProofNo",          "Id Proof No",           "personal", 200),
+                new("kraPin",             "KRA PIN",               "personal", 210),
+                new("familyNumber",       "Family Number",         "personal", 220),
+                new("staffId",            "STAFF ID",              "personal", 230),
+                new("dependentId",        "Dependent ID",          "personal", 240),
+                new("nationalId",         "National ID",           "personal", 250),
+                new("pregnancyDays",      "PREGNANCY DAYS",        "personal", 260),
+                new("altCountryCode",     "Code",                  "other", 300),
+                new("alternativeNo",      "Alternative No",        "other", 310),
+                new("occupation",         "Occupation",            "other", 320),
+                new("birthPlace",         "Birth Place",           "other", 330),
+                new("religion",           "Religion",              "other", 340),
+                new("emgFirstName",       "Emg First Name",        "other", 350),
+                new("emgLastName",        "Emg Last Name",         "other", 360),
+                new("emgRelation",        "Emg Relation",          "other", 370),
+                new("emgMobileCode",      "Emg Code",              "other", 380),
+                new("emgMobileNo",        "Emg Mobile No",         "other", 390),
+                new("emgResidentNo",      "Emg Resident No",       "other", 400),
+                new("emgAddress",         "Emg Address",           "other", 410),
+                new("isInternational",    "Is International",      "other", 420),
+                new("nationality",        "Nationality",           "other", 430),
+                new("passportNumber",     "Passport Number",       "other", 440),
+                new("internationalNo",    "International No",      "other", 450),
+                new("locality",           "Locality",              "other", 460),
+                new("membershipNo",       "Membership No",         "other", 470),
+                new("patientType",        "Patient Type",          "other", 480),
+                new("source",             "Source",                "other", 490),
+                new("empReferenceId",     "Emp Reference Id",      "other", 500),
+                new("identityMark",       "Identity Mark",         "other", 510),
+                new("identityMark2",      "Identity Mark 2",       "other", 520),
+                new("referenceType",      "Reference Type",        "other", 530),
+                new("mlcType",            "Mlc Type",              "other", 540),
+                new("mlcNo",              "Mlc No",                "other", 550),
+                new("relationOf",         "Relation Of",           "other", 560),
+                new("relationName",       "Relation Name",         "other", 570),
+                new("relationPhone",      "Relation Phone",        "other", 580),
+                new("insuranceGroup",     "Insurance Group",       "scheme", 600),
+                new("insurance",          "Insurance",             "scheme", 610),
+                new("panel",              "Panel",                 "scheme", 620),
+                new("policyNo",           "Policy No",             "scheme", 630),
+                new("policyCardNo",       "Policy Card No",        "scheme", 640),
+                new("nameOnCard",         "Name On Card",          "scheme", 650),
+                new("expireDate",         "Expire Date",           "scheme", 660),
+                new("cardHolder",         "Card Holder",           "scheme", 670),
+                new("approvalAmount",     "Approval Amount",       "scheme", 680),
+                new("approvalRemark",     "Approval Remark",       "scheme", 690),
+                new("patientCode",        "UHID",                  "personal", 5)
+            },
+            new ScreenSection[]
+            {
+                new("personal", "Personal Details"),
+                new("other",    "Other Details"),
+                new("scheme",   "Scheme Details")
             }),
 
         new Screen(

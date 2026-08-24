@@ -89,7 +89,27 @@ public sealed class CustomFieldService : ICustomFieldService
                 ScreenKey = s.Key,
                 Label = s.Label,
                 FieldCount = configured.Count(f => string.Equals(f.ScreenKey, s.Key, StringComparison.OrdinalIgnoreCase)),
-                CompiledFieldKeys = s.Fields.Select(f => f.Key).ToList()
+                CompiledFieldKeys = s.Fields.Select(f => f.Key).ToList(),
+                // A screen that has not declared positions still gets usable ones: its
+                // fields are numbered by the order they are catalogued in, on the same ten
+                // spacing the sectioned screens use, so "place after" works everywhere.
+                CompiledFields = s.Fields
+                    .Select((f, index) => new CompiledScreenField
+                    {
+                        FieldKey = f.Key,
+                        Label = f.Label,
+                        SectionKey = f.Section,
+                        SeqNo = f.Seq > 0 ? f.Seq : (index + 1) * 10
+                    })
+                    .OrderBy(f => f.SeqNo)
+                    .ToList(),
+                Sections = (s.Sections ?? Array.Empty<ScreenCatalog.ScreenSection>())
+                    .Select(section => new CustomFieldSection
+                    {
+                        SectionKey = section.Key,
+                        Label = section.Label
+                    })
+                    .ToList()
             })
             .ToList();
     }

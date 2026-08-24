@@ -328,13 +328,40 @@ public sealed class CustomFieldUsage
     public int FilledCount { get; set; }
 }
 
-/// <summary>A screen that accepts custom fields, plus the keys it already compiled in.</summary>
+/// <summary>A screen that accepts custom fields, plus the shape it already compiled in.</summary>
 public sealed class CustomFieldScreen
 {
     public string ScreenKey { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
     public int FieldCount { get; set; }
+
+    /// <summary>Kept for callers that only ever wanted the keys.</summary>
     public List<string> CompiledFieldKeys { get; set; } = new();
+
+    /// <summary>
+    /// The compiled fields with their section and position, so the builder can ask "after
+    /// which field?" rather than "what sequence number?".
+    /// </summary>
+    public List<CompiledScreenField> CompiledFields { get; set; } = new();
+
+    /// <summary>The bands the screen draws. Empty for a screen that has never been sectioned.</summary>
+    public List<CustomFieldSection> Sections { get; set; } = new();
+}
+
+/// <summary>One compiled field, as the Field Builder needs to see it.</summary>
+public sealed class CompiledScreenField
+{
+    public string FieldKey { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public string? SectionKey { get; set; }
+    public int SeqNo { get; set; }
+}
+
+/// <summary>A section on a screen: the card a field is drawn inside.</summary>
+public sealed class CustomFieldSection
+{
+    public string SectionKey { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
 }
 
 /// <summary>The control types the builder offers, and what each one may be configured with.</summary>
