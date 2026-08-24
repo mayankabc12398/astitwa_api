@@ -37,6 +37,35 @@ public sealed class Designation
 }
 
 // ---------------------------------------------------------------------
+// Patient
+// ---------------------------------------------------------------------
+
+/// <summary>
+/// A registered patient. Ten fields and no clinical data: this is the front-desk record
+/// everything downstream hangs off, not a chart.
+///
+/// One class serves both the grid and the form, unlike Employee, because nothing here is
+/// resolved from another table — a list row has no foreign name to look up.
+/// </summary>
+public sealed class Patient
+{
+    public int PatientId { get; set; }
+    /// <summary>The UHID. Unique inside the tenant; the index is what says so.</summary>
+    public string PatientCode { get; set; } = string.Empty;
+    public string FullName { get; set; } = string.Empty;
+    public string? Gender { get; set; }
+    public DateTime? Dob { get; set; }
+    /// <summary>Required: it is how a desk finds a returning patient.</summary>
+    public string Mobile { get; set; } = string.Empty;
+    public string? Email { get; set; }
+    public string? BloodGroup { get; set; }
+    public string? Address { get; set; }
+    public string? City { get; set; }
+    public DateTime? RegisteredOn { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
+// ---------------------------------------------------------------------
 // Employee
 // ---------------------------------------------------------------------
 

@@ -45,6 +45,9 @@ public static class BaseMenu
 {
     public static readonly IReadOnlyList<MenuEntry> Entries = new[]
     {
+        // Registration comes before the staff list: it is the screen the front desk
+        // opens first, and the sequence number is the only thing that says so.
+        new MenuEntry("hr.patient",      "Patients",         "/hr/patient",        "user-plus", 5,   null, "hr.patient.view"),
         new MenuEntry("hr.employee",     "Employees",        "/hr/employee",       "users",     10,  null, "hr.employee.view"),
         new MenuEntry("hr.department",   "Departments",      "/hr/department",     "sitemap",   20,  null, "hr.department.view"),
         new MenuEntry("hr.designation",  "Designations",     "/hr/designation",    "badge",     30,  null, "hr.designation.view"),

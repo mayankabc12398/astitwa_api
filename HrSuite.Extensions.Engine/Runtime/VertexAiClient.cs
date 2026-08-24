@@ -232,6 +232,59 @@ public sealed class VertexAiClient
         return builder.Length == 0 ? null : builder.ToString();
     }
 
+    /// <summary>
+    /// Narration audio, for the product walkthrough videos.
+    ///
+    /// It lives here because it needs the one thing this class already has — a Google access
+    /// token — and that token is minted from a key that must not leave the server. A tool
+    /// that generated audio on somebody's laptop would need its own copy of that key, which
+    /// is how a credential ends up in three places and is rotated in one.
+    /// </summary>
+    public async Task<byte[]> SpeakAsync(
+        string text, string voiceName, string languageCode, double speakingRate, CancellationToken ct = default)
+    {
+        if (!IsConfigured)
+            throw new InvalidOperationException("Vertex AI is not configured on this server.");
+
+        var token = await AccessTokenAsync(LoadAccount(), ct).ConfigureAwait(false);
+
+        var body = new
+        {
+            input = new { text },
+            voice = new { languageCode, name = voiceName },
+            audioConfig = new
+            {
+                audioEncoding = "MP3",
+                speakingRate,
+                effectsProfileId = new[] { "headphone-class-device" }
+            }
+        };
+
+        using var client = _http.CreateClient();
+        client.Timeout = TimeSpan.FromSeconds(_options.TimeoutSeconds);
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "https://texttospeech.googleapis.com/v1/text:synthesize")
+        {
+            Content = new StringContent(JsonSerializer.Serialize(body, Json), Encoding.UTF8, "application/json")
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var response = await client.SendAsync(request, ct).ConfigureAwait(false);
+        var payload = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            _log.LogError("Text-to-Speech refused: {Status} {Body}", (int)response.StatusCode, payload);
+            throw new InvalidOperationException(FriendlyError(response.StatusCode, payload));
+        }
+
+        using var document = JsonDocument.Parse(payload);
+        var audio = document.RootElement.GetProperty("audioContent").GetString()
+            ?? throw new InvalidOperationException("Text-to-Speech returned no audio.");
+
+        return Convert.FromBase64String(audio);
+    }
+
     // -----------------------------------------------------------------
     // Credential
     // -----------------------------------------------------------------

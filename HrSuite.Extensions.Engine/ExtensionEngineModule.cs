@@ -29,6 +29,7 @@ public sealed class ExtensionEngineModule : IPluginModule
         services.AddScoped<NamedQueryRepository>();
         services.AddScoped<HookLogRepository>();
         services.AddScoped<CustomApiRepository>();
+        services.AddScoped<AiThreadRepository>();
 
         services.AddScoped<INamedQueryRunner, NamedQueryRunner>();
 

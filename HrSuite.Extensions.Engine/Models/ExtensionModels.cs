@@ -129,3 +129,39 @@ public sealed class ScriptTestResponse
     public object? Result { get; set; }
     public IReadOnlyList<string> Messages { get; set; } = Array.Empty<string>();
 }
+
+/// <summary>
+/// One assistant conversation, about one thing being edited, belonging to one person.
+///
+/// Per user rather than per tenant: a thread is somebody's working notes while they write a
+/// script, not documentation the tenant publishes. Two administrators opening the same hook
+/// each get their own.
+/// </summary>
+public sealed class AiThread
+{
+    public int ThreadId { get; set; }
+    /// <summary>hook:hr.patient.onLoad, endpoint:getemployeelist — free text.</summary>
+    public string ThreadKey { get; set; } = string.Empty;
+    public string? Title { get; set; }
+    public string? Language { get; set; }
+    public int MessageCount { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public DateTime? UpdatedOn { get; set; }
+}
+
+public sealed class AiMessage
+{
+    public long MessageId { get; set; }
+    /// <summary>user | model, the names both Vertex and the panel already use.</summary>
+    public string Role { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
+    public string? Model { get; set; }
+    public int? DurationMs { get; set; }
+    public DateTime CreatedOn { get; set; }
+}
+
+public static class AiMessageRole
+{
+    public const string User = "user";
+    public const string Model = "model";
+}

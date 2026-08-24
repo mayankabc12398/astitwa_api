@@ -10,6 +10,8 @@ public static class Permissions
     public const string DepartmentEdit   = "hr.department.edit";
     public const string DesignationView  = "hr.designation.view";
     public const string DesignationEdit  = "hr.designation.edit";
+    public const string PatientView      = "hr.patient.view";
+    public const string PatientEdit      = "hr.patient.edit";
     public const string EmployeeView     = "hr.employee.view";
     public const string EmployeeEdit     = "hr.employee.edit";
     public const string LeaveView        = "hr.leave.view";
@@ -36,6 +38,7 @@ public static class Permissions
     {
         DepartmentView, DepartmentEdit,
         DesignationView, DesignationEdit,
+        PatientView, PatientEdit,
         EmployeeView, EmployeeEdit,
         LeaveView, LeaveEdit, LeaveApprove,
         DocumentView, DocumentEdit, DocumentIssue,

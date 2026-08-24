@@ -37,6 +37,7 @@ public static class InfrastructureRegistration
         // Layer 1 HR: repositories and the services that hold the base rules.
         services.AddScoped<IDepartmentRepository, DepartmentRepository>();
         services.AddScoped<IDesignationRepository, DesignationRepository>();
+        services.AddScoped<IPatientRepository, PatientRepository>();
         services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<ILeaveRepository, LeaveRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
@@ -50,6 +51,7 @@ public static class InfrastructureRegistration
         services.AddScoped<HookInvoker>();
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IDesignationService, DesignationService>();
+        services.AddScoped<IPatientService, PatientService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<ILeaveService, LeaveService>();
         services.AddScoped<IDocumentService, DocumentService>();

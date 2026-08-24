@@ -50,6 +50,29 @@ public static class ScreenCatalog
     public static readonly IReadOnlyList<Screen> Screens = new[]
     {
         new Screen(
+            "hr.patient",
+            "Patient",
+            new HookSlot[]
+            {
+                new(HookKeys.PatientOnLoad,     "On load"),
+                new(HookKeys.PatientBeforeSave, "Before save"),
+                new(HookKeys.PatientAfterSave,  "After save")
+            },
+            new ScreenField[]
+            {
+                new("patientCode",  "UHID"),
+                new("fullName",     "Name"),
+                new("gender",       "Gender"),
+                new("dob",          "Date of birth"),
+                new("mobile",       "Mobile"),
+                new("email",        "Email"),
+                new("bloodGroup",   "Blood group"),
+                new("address",      "Address"),
+                new("city",         "City"),
+                new("registeredOn", "Registered on")
+            }),
+
+        new Screen(
             "hr.employee",
             "Employee",
             new HookSlot[]

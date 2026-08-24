@@ -11,6 +11,10 @@ namespace HrSuite.Core.Extensibility;
 /// </summary>
 public static class HookKeys
 {
+    public const string PatientOnLoad          = "hr.patient.onLoad";
+    public const string PatientBeforeSave      = "hr.patient.beforeSave";
+    public const string PatientAfterSave       = "hr.patient.afterSave";
+
     public const string EmployeeOnLoad         = "hr.employee.onLoad";
     public const string EmployeeBeforeSave     = "hr.employee.beforeSave";
     public const string EmployeeAfterSave      = "hr.employee.afterSave";
@@ -37,6 +41,7 @@ public static class HookKeys
     /// </summary>
     public static readonly IReadOnlyList<string> All = new[]
     {
+        PatientOnLoad, PatientBeforeSave, PatientAfterSave,
         EmployeeOnLoad, EmployeeBeforeSave, EmployeeAfterSave,
         LeaveRequestOnLoad, LeaveRequestBeforeSave, LeaveRequestAfterSave,
         DepartmentOnLoad, DepartmentBeforeSave, DepartmentAfterSave,

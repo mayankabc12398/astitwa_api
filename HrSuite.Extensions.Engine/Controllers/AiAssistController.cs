@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using System.Text;
 using HrSuite.Common.Results;
+using HrSuite.Extensions.Engine.Data;
+using HrSuite.Extensions.Engine.Models;
 using HrSuite.Extensions.Engine.Runtime;
 // WriteAsync is an extension on HttpResponse, and the streaming endpoint writes its events
 // straight to the body rather than returning an IActionResult.
@@ -24,8 +27,13 @@ namespace HrSuite.Extensions.Engine.Controllers;
 public sealed class AiAssistController : ExtensionControllerBase
 {
     private readonly VertexAiClient _vertex;
+    private readonly AiThreadRepository _threads;
 
-    public AiAssistController(VertexAiClient vertex) => _vertex = vertex;
+    public AiAssistController(VertexAiClient vertex, AiThreadRepository threads)
+    {
+        _vertex = vertex;
+        _threads = threads;
+    }
 
     /// <summary>Lets the editor hide its assistant rather than offer a button that always fails.</summary>
     [HttpGet("status")]
@@ -34,6 +42,39 @@ public sealed class AiAssistController : ExtensionControllerBase
         Available = _vertex.IsConfigured,
         Model = _vertex.IsConfigured ? _vertex.Model : null
     });
+
+    /// <summary>
+    /// The conversation about one hook or one endpoint, as it was left.
+    ///
+    /// A read never creates a row: opening an editor is not the same as having asked
+    /// something, and a table full of empty threads would say it was.
+    /// </summary>
+    [HttpGet("thread")]
+    public async Task<IActionResult> Thread([FromQuery] string? key, [FromQuery] int limit, CancellationToken ct)
+    {
+        if (!IsStorable(key)) return Fail(ErrorCode.Validation, "A conversation needs a key.");
+
+        var messages = await _threads.MessagesAsync(key!, limit is > 0 and <= 200 ? limit : 100, ct);
+        return Data(new { ThreadKey = key, Messages = messages });
+    }
+
+    /// <summary>Every conversation this user has had, most recently used first.</summary>
+    [HttpGet("threads")]
+    public async Task<IActionResult> Threads([FromQuery] PageRequest page, CancellationToken ct)
+        => Data(await _threads.ListAsync(page, ct));
+
+    /// <summary>
+    /// "Clear this conversation" — a real delete, because that is what the words promise.
+    /// The procedure filters on the signed-in user, so it can only reach their own thread.
+    /// </summary>
+    [HttpDelete("thread")]
+    public async Task<IActionResult> ClearThread([FromQuery] string? key, CancellationToken ct)
+    {
+        if (!IsStorable(key)) return Fail(ErrorCode.Validation, "A conversation needs a key.");
+
+        await _threads.ClearAsync(key!, ct);
+        return Data(new { Cleared = true });
+    }
 
     [HttpPost("assist")]
     public async Task<IActionResult> Assist([FromBody] AssistRequest request, CancellationToken ct)
@@ -63,7 +104,11 @@ public sealed class AiAssistController : ExtensionControllerBase
 
         try
         {
+            var clock = Stopwatch.StartNew();
             var answer = await _vertex.GenerateAsync(SystemPrompt(request), turns, ct);
+            clock.Stop();
+
+            await RememberAsync(request, answer, clock.ElapsedMilliseconds);
             return Data(new { Answer = answer, Model = _vertex.Model });
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -75,6 +120,51 @@ public sealed class AiAssistController : ExtensionControllerBase
         {
             return Fail(ErrorCode.Unexpected, cause.Message);
         }
+    }
+
+    /// <summary>
+    /// Narration audio for the walkthrough videos, in whichever voice the caller names.
+    ///
+    /// Behind the same permission as the rest of this controller, and returning audio rather
+    /// than a token: a build script on somebody's laptop gets its MP3 without ever holding a
+    /// Google credential of its own.
+    /// </summary>
+    [HttpPost("speak")]
+    public async Task<IActionResult> Speak([FromBody] SpeakRequest request, CancellationToken ct)
+    {
+        if (!_vertex.IsConfigured)
+            return Fail(ErrorCode.Validation, "Vertex AI is not configured on this server.");
+
+        if (string.IsNullOrWhiteSpace(request.Text))
+            return Fail(ErrorCode.Validation, "There is nothing to say.");
+
+        if (request.Text.Length > 5000)
+            return Fail(ErrorCode.Validation, "Text-to-Speech takes 5000 characters at a time. Split the scene.");
+
+        try
+        {
+            var audio = await _vertex.SpeakAsync(
+                request.Text,
+                string.IsNullOrWhiteSpace(request.Voice) ? "en-IN-Wavenet-D" : request.Voice,
+                string.IsNullOrWhiteSpace(request.LanguageCode) ? "en-IN" : request.LanguageCode,
+                request.SpeakingRate is < 0.25 or > 4 ? 1.0 : request.SpeakingRate,
+                ct);
+
+            return File(audio, "audio/mpeg");
+        }
+        catch (Exception cause)
+        {
+            return Fail(ErrorCode.Unexpected, cause.Message);
+        }
+    }
+
+    public sealed class SpeakRequest
+    {
+        public string Text { get; set; } = string.Empty;
+        /// <summary>An en-IN voice, e.g. en-IN-Wavenet-D (male) or en-IN-Wavenet-A (female).</summary>
+        public string? Voice { get; set; }
+        public string? LanguageCode { get; set; }
+        public double SpeakingRate { get; set; } = 0.95;
     }
 
     /// <summary>
@@ -123,10 +213,16 @@ public sealed class AiAssistController : ExtensionControllerBase
         }
         turns.Add(("user", UserMessage(request)));
 
+        // Kept as it streams, so the thread can be filed afterwards. The browser shows the
+        // answer as it arrives; the database gets it once, whole.
+        var written = new StringBuilder();
+        var clock = Stopwatch.StartNew();
+
         try
         {
             await foreach (var chunk in _vertex.StreamAsync(SystemPrompt(request), turns, ct))
             {
+                written.Append(chunk);
                 await SendAsync("chunk", chunk, ct);
             }
 
@@ -134,13 +230,62 @@ public sealed class AiAssistController : ExtensionControllerBase
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
-            // The reader closed the connection — asked again, or left the screen. Nothing to say.
+            // The reader closed the connection — pressed Stop, asked again, or left the
+            // screen. Whatever had arrived by then is still an answer the panel is showing,
+            // so it is filed rather than dropped.
         }
         catch (Exception cause)
         {
             await SendAsync("error", cause.Message, ct);
         }
+
+        clock.Stop();
+        await RememberAsync(request, written.ToString(), clock.ElapsedMilliseconds);
     }
+
+    /// <summary>
+    /// Files the exchange against its thread.
+    ///
+    /// The question is stored, not the editor buffer that went with it: the buffer is
+    /// already in the hook's own version history, and storing it per question would put the
+    /// same script in the database twenty times over.
+    ///
+    /// Never allowed to fail the answer. The user asked a question and got one; a
+    /// conversation that could not be written down is not their problem, and throwing here
+    /// would turn a working assistant into a broken one.
+    /// </summary>
+    private async Task RememberAsync(AssistRequest request, string answer, long elapsedMs)
+    {
+        if (!IsStorable(request.ThreadKey)) return;
+
+        var key = request.ThreadKey!.Trim();
+        var title = string.IsNullOrWhiteSpace(request.Title) ? request.Context : request.Title;
+
+        try
+        {
+            // CancellationToken.None on purpose: a cancelled request is the commonest way
+            // this is reached, and passing the cancelled token would skip the write.
+            await _threads.AddAsync(
+                key, title, request.Language, AiMessageRole.User, request.Question,
+                null, null, CancellationToken.None);
+
+            if (!string.IsNullOrWhiteSpace(answer))
+            {
+                await _threads.AddAsync(
+                    key, title, request.Language, AiMessageRole.Model, answer,
+                    _vertex.Model, (int)Math.Min(elapsedMs, int.MaxValue), CancellationToken.None);
+            }
+        }
+        catch
+        {
+            // Deliberately swallowed. The hook log is for scripts; this is a note-keeping
+            // side effect, and the answer has already been delivered.
+        }
+    }
+
+    /// <summary>A key that is missing, blank or longer than the column is not stored.</summary>
+    private static bool IsStorable(string? threadKey)
+        => !string.IsNullOrWhiteSpace(threadKey) && threadKey.Trim().Length <= 160;
 
     /// <summary>
     /// One SSE event. The text is JSON-encoded rather than written raw because a newline in
@@ -165,7 +310,7 @@ public sealed class AiAssistController : ExtensionControllerBase
         var builder = new StringBuilder();
 
         builder.AppendLine(
-            "You help an administrator of HrSuite, a multi-tenant HR product, inside its own code editor. " +
+            "You help an administrator of Demo Hospital, a multi-tenant hospital product, inside its own code editor. " +
             "Answer briefly. When you write code, give one complete block that can be pasted in as is, " +
             "and explain only what is not obvious from reading it.");
 
@@ -239,6 +384,13 @@ public sealed class AiAssistController : ExtensionControllerBase
         public string Question { get; set; } = string.Empty;
         /// <summary>Which hook slot or endpoint this is, when the screen knows.</summary>
         public string? Context { get; set; }
+        /// <summary>
+        /// Which conversation this belongs to, e.g. hook:hr.patient.onLoad. Absent means
+        /// "do not file this" — the panel still works, it just forgets.
+        /// </summary>
+        public string? ThreadKey { get; set; }
+        /// <summary>What to call the thread in a list. Falls back to Context.</summary>
+        public string? Title { get; set; }
         public List<AssistTurn>? History { get; set; }
     }
 

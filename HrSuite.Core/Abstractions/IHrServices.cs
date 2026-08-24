@@ -21,6 +21,15 @@ public interface IDesignationService
     Task<IReadOnlyList<LookupItem>> LookupAsync(CancellationToken ct = default);
 }
 
+public interface IPatientService
+{
+    Task<PagedResult<Patient>> ListAsync(PageRequest page, CancellationToken ct = default);
+    Task<Result<Patient>> GetAsync(int id, CancellationToken ct = default);
+    Task<Result<Patient>> SaveAsync(Patient patient, CancellationToken ct = default);
+    Task<Result> DeleteAsync(int id, CancellationToken ct = default);
+    Task<IReadOnlyList<LookupItem>> LookupAsync(CancellationToken ct = default);
+}
+
 public interface IEmployeeService
 {
     Task<PagedResult<EmployeeListItem>> ListAsync(PageRequest page, CancellationToken ct = default);
