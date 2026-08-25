@@ -70,3 +70,32 @@ public interface ICustomFieldRepository
 
     Task<PagedResult<CustomValueArchiveRow>> ArchiveAsync(PageRequest page, int? fieldId, CancellationToken ct = default);
 }
+
+/// <summary>
+/// The field builder that writes real columns.
+///
+/// Metadata and schema sit behind one interface because they are one operation: a field is
+/// its column plus the row that describes it, and a caller that could reach only half of that
+/// could leave a screen describing a column nobody created.
+/// </summary>
+public interface IFieldColumnRepository
+{
+    Task<IReadOnlyList<FieldColumnScreen>> ScreensAsync(CancellationToken ct = default);
+    Task<FieldColumnScreen?> ScreenAsync(string screenCode, CancellationToken ct = default);
+    Task<FieldColumnLayout?> LayoutAsync(string screenCode, CancellationToken ct = default);
+    Task<FieldColumn?> FieldAsync(int fieldId, CancellationToken ct = default);
+    Task<FieldColumn?> SaveMetadataAsync(FieldColumn field, CancellationToken ct = default);
+    Task DeleteMetadataAsync(int fieldId, CancellationToken ct = default);
+    Task ReorderAsync(IReadOnlyList<FieldColumnPosition> items, CancellationToken ct = default);
+    Task<IReadOnlyList<FieldColumnAudit>> AuditAsync(string? screenCode, CancellationToken ct = default);
+
+    /// <summary>The columns the table actually has, so a definition can be checked against reality.</summary>
+    Task<IReadOnlySet<string>> LiveColumnsAsync(string table, CancellationToken ct = default);
+
+    Task<string> AddColumnAsync(FieldColumnScreen screen, string column, string sqlType, string? afterColumn, CancellationToken ct = default);
+    Task<string> ChangeColumnAsync(FieldColumnScreen screen, string fromColumn, string toColumn, string sqlType, CancellationToken ct = default);
+    Task<string> MoveColumnAsync(FieldColumnScreen screen, string column, string sqlType, string? afterColumn, CancellationToken ct = default);
+
+    /// <summary>Archives the values, then drops the column.</summary>
+    Task<string> DropColumnAsync(FieldColumnScreen screen, FieldColumn field, CancellationToken ct = default);
+}

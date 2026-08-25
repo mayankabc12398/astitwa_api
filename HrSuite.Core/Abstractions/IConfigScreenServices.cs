@@ -93,3 +93,18 @@ public interface ICustomFieldService
     Task<PagedResult<CustomFieldAudit>> AuditAsync(PageRequest page, string? screenKey, CancellationToken ct = default);
     Task<PagedResult<CustomValueArchiveRow>> ArchiveAsync(PageRequest page, int? fieldId, CancellationToken ct = default);
 }
+
+/// <summary>Screens whose configured fields are real columns on their own table.</summary>
+public interface IFieldColumnService
+{
+    IReadOnlyList<FieldColumnControlType> ControlTypes();
+    Task<IReadOnlyList<FieldColumnScreen>> ScreensAsync(CancellationToken ct = default);
+    Task<Result<FieldColumnLayout>> LayoutAsync(string screenCode, CancellationToken ct = default);
+    Task<Result<FieldColumn>> SaveAsync(string screenCode, FieldColumn field, CancellationToken ct = default);
+
+    /// <summary>The column name is confirmed by the caller: an id alone is one stale tab from the wrong drop.</summary>
+    Task<Result> DeleteAsync(int fieldId, string confirmColumnName, CancellationToken ct = default);
+
+    Task<Result> ReorderAsync(IReadOnlyList<FieldColumnPosition> items, CancellationToken ct = default);
+    Task<IReadOnlyList<FieldColumnAudit>> AuditAsync(string? screenCode, CancellationToken ct = default);
+}

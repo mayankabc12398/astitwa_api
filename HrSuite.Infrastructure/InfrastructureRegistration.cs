@@ -8,6 +8,7 @@ using HrSuite.Infrastructure.Identity;
 using HrSuite.Infrastructure.Modularity;
 using HrSuite.Infrastructure.Notifications;
 using HrSuite.Infrastructure.Repositories;
+using HrSuite.Infrastructure.Schema;
 using HrSuite.Core.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,11 +48,16 @@ public static class InfrastructureRegistration
         // is the tenant's decision, which is the same split cfg_field_rule already has.
         services.AddScoped<IPrintTemplateRepository, PrintTemplateRepository>();
         services.AddScoped<ICustomFieldRepository, CustomFieldRepository>();
+        services.AddScoped<ISchemaExecutor, SchemaExecutor>();
+        services.AddScoped<IFieldColumnRepository, FieldColumnRepository>();
+        services.AddScoped<IJobRequisitionRepository, JobRequisitionRepository>();
 
         services.AddScoped<HookInvoker>();
         services.AddScoped<IDepartmentService, DepartmentService>();
         services.AddScoped<IDesignationService, DesignationService>();
         services.AddScoped<IPatientService, PatientService>();
+        services.AddScoped<IFieldColumnService, FieldColumnService>();
+        services.AddScoped<IJobRequisitionService, JobRequisitionService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<ILeaveService, LeaveService>();
         services.AddScoped<IDocumentService, DocumentService>();

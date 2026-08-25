@@ -284,3 +284,50 @@ public sealed class LeaveDecision
     public bool Approve { get; set; }
     public string? Remark { get; set; }
 }
+
+// ---------------------------------------------------------------------
+// Job requisition
+// ---------------------------------------------------------------------
+
+/// <summary>
+/// A vacancy being raised, captured over three steps: the role, then the money and dates,
+/// then a review of both.
+///
+/// The first screen whose extra fields are real columns rather than rows — anything a
+/// hospital adds through the Screen Field Builder lands on hr_job_requisition beside these
+/// and travels in <see cref="Extra"/>.
+/// </summary>
+public sealed class JobRequisition
+{
+    public int RequisitionId { get; set; }
+    public string RequisitionCode { get; set; } = string.Empty;
+
+    // Step 1 — the role
+    public string JobTitle { get; set; } = string.Empty;
+    public int? DepartmentId { get; set; }
+    public string? DepartmentName { get; set; }
+    public int Openings { get; set; } = 1;
+    public string? ExperienceRange { get; set; }
+    public string? EmploymentType { get; set; }
+    public string? Priority { get; set; }
+    public string? KeySkills { get; set; }
+
+    // Step 2 — money and dates
+    public decimal? BudgetMin { get; set; }
+    public decimal? BudgetMax { get; set; }
+    public DateTime? TargetDate { get; set; }
+    public string? Notes { get; set; }
+
+    public string Status { get; set; } = "Draft";
+    public bool IsActive { get; set; } = true;
+
+    /// <summary>
+    /// Values for the cf_ columns the Screen Field Builder added, keyed by column name.
+    ///
+    /// Kept as a bag rather than typed properties because the whole point of the feature is
+    /// that the product does not know what a hospital added. The repository writes only the
+    /// keys that are live columns on the table, so a stale key from an old browser tab is
+    /// ignored rather than failing the save.
+    /// </summary>
+    public Dictionary<string, object?> Extra { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+}

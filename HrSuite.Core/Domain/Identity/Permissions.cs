@@ -33,6 +33,12 @@ public static class Permissions
     public const string AdminPrintTemplate = "admin.printTemplate";
     /// <summary>Gates the field builder. Reading the definitions is not gated by it.</summary>
     public const string AdminCustomField   = "admin.customField";
+    /// <summary>The builder that adds real columns. Separate from AdminCustomField: one
+    /// writes rows, the other changes the schema, and a tenant may reasonably allow the
+    /// first without the second.</summary>
+    public const string AdminFieldColumn   = "admin.fieldColumn";
+    public const string JobRequisitionView = "hr.jobRequisition.view";
+    public const string JobRequisitionEdit = "hr.jobRequisition.edit";
 
     public static readonly IReadOnlyList<string> All = new[]
     {

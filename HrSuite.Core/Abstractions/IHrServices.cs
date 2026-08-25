@@ -68,3 +68,11 @@ public interface IDocumentService
 
     Task<Result> DeleteAsync(int id, CancellationToken ct = default);
 }
+
+public interface IJobRequisitionService
+{
+    Task<PagedResult<JobRequisition>> ListAsync(PageRequest page, CancellationToken ct = default);
+    Task<Result<JobRequisition>> GetAsync(int id, CancellationToken ct = default);
+    Task<Result<JobRequisition>> SaveAsync(JobRequisition requisition, CancellationToken ct = default);
+    Task<Result> DeleteAsync(int id, CancellationToken ct = default);
+}

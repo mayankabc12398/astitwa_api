@@ -73,3 +73,12 @@ public interface IDocumentRepository
 
     Task DeleteAsync(int documentId, CancellationToken ct = default);
 }
+
+/// <summary>Job requisitions, including whatever columns the field builder added to them.</summary>
+public interface IJobRequisitionRepository
+{
+    Task<PagedResult<JobRequisition>> ListAsync(PageRequest page, CancellationToken ct = default);
+    Task<JobRequisition?> GetAsync(int requisitionId, CancellationToken ct = default);
+    Task<JobRequisition?> SaveAsync(JobRequisition requisition, CancellationToken ct = default);
+    Task DeleteAsync(int requisitionId, CancellationToken ct = default);
+}
