@@ -28,7 +28,7 @@ namespace HrSuite.Extensions.Engine.Runtime;
 ///      database, in the wrapper SqlGuard.Compile builds, rather than by fetching
 ///      everything and discarding most of it.
 /// </summary>
-public sealed class CustomApiRunner
+public sealed class CustomApiRunner : ICustomApiCaller
 {
     private readonly IDbConnectionFactory _factory;
     private readonly CustomApiRepository _repository;

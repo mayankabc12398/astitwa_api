@@ -1,5 +1,6 @@
 using HrSuite.Core.Abstractions;
 using HrSuite.Core.Extensibility;
+using HrSuite.Extensions.Engine.Models;
 using HrSuite.Extensions.Engine.Runtime;
 using Xunit;
 
@@ -215,6 +216,64 @@ public class ScriptSandboxTests
 
         // Strict mode turns the assignment into a TypeError rather than a silent no-op.
         Assert.False(outcome.Ok);
+    }
+
+    // api.callEndpoint() reads the same on the server as in the browser sandbox. The Test
+    // button runs every script here, including client ones, so a client script that calls
+    // an endpoint must at least parse and run — otherwise it can never be saved.
+    [Fact]
+    public void A_script_can_call_an_api_builder_endpoint()
+    {
+        const string body = """
+            var res = await api.callEndpoint('getnextuhid', {});
+            if (!res.ok) return { message: 'failed: ' + res.error };
+            return { form: { patientCode: res.rows[0].uhid } };
+            """;
+
+        var host = new ScriptHost(new StubQueryRunner(), new StubEndpointCaller("getnextuhid", "UH-000042"));
+        var outcome = host.Run(body, Context(), CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.Equal("UH-000042", outcome.Result.Form?["patientCode"]?.ToString());
+    }
+
+    [Fact]
+    public void Without_an_endpoint_caller_callEndpoint_answers_not_ok_rather_than_throwing()
+    {
+        const string body = """
+            var res = await api.callEndpoint('getnextuhid');
+            return { message: res.ok ? 'ok' : 'not ok' };
+            """;
+
+        var outcome = Host().Run(body, Context(), CancellationToken.None);
+
+        Assert.True(outcome.Ok, outcome.Error);
+        Assert.Equal("not ok", outcome.Result.Message);
+    }
+
+    private sealed class StubEndpointCaller : ICustomApiCaller
+    {
+        private readonly string _slug;
+        private readonly string _uhid;
+
+        public StubEndpointCaller(string slug, string uhid)
+        {
+            _slug = slug;
+            _uhid = uhid;
+        }
+
+        public Task<CustomApiResult> RunAsync(string slug, IDictionary<string, object?>? supplied, CancellationToken ct = default)
+        {
+            if (!string.Equals(slug, _slug, StringComparison.OrdinalIgnoreCase))
+                return Task.FromResult(CustomApiResult.Failure($"'{slug}' is not an endpoint."));
+
+            var rows = new List<IDictionary<string, object?>>
+            {
+                new Dictionary<string, object?> { ["uhid"] = _uhid }
+            };
+
+            return Task.FromResult(new CustomApiResult(true, rows, new[] { "uhid" }, false));
+        }
     }
 
     private sealed class StubQueryRunner : INamedQueryRunner

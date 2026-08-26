@@ -36,6 +36,8 @@ public sealed class ExtensionEngineModule : IPluginModule
         // Not behind an interface in Core: base code has no business calling an endpoint an
         // administrator wrote, and declaring the type there would invite it to.
         services.AddScoped<CustomApiRunner>();
+        // The same instance, seen by ScriptHost as api.callEndpoint().
+        services.AddScoped<ICustomApiCaller>(sp => sp.GetRequiredService<CustomApiRunner>());
         services.AddScoped<ScriptHost>();
 
         // The editor's assistant. Singleton because the Google access token it mints is good

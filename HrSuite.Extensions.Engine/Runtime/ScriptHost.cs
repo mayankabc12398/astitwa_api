@@ -24,8 +24,18 @@ public sealed class ScriptHost
     public const long MemoryLimitBytes = 4 * 1024 * 1024;
 
     private readonly INamedQueryRunner _queries;
+    private readonly ICustomApiCaller? _endpoints;
 
-    public ScriptHost(INamedQueryRunner queries) => _queries = queries;
+    /// <param name="endpoints">
+    /// Optional so a host can be built without the API Builder — the sandbox tests do. With
+    /// none supplied, <c>api.callEndpoint()</c> answers <c>{ ok: false }</c> rather than throwing,
+    /// so a script that guards on <c>ok</c> behaves the same everywhere.
+    /// </param>
+    public ScriptHost(INamedQueryRunner queries, ICustomApiCaller? endpoints = null)
+    {
+        _queries = queries;
+        _endpoints = endpoints;
+    }
 
     public ScriptRunOutcome Run(string scriptBody, HookContext context, CancellationToken ct)
     {
@@ -150,6 +160,35 @@ public sealed class ScriptHost
             });
         }));
 
+        // api.callEndpoint(slug, params) — an endpoint written in the API Builder, run as the
+        // signed-in user. Same answer shape as api.query so a script can treat them alike.
+        engine.SetValue("__callEndpoint", new Func<string, JsValue, JsValue>((slug, parameters) =>
+        {
+            if (_endpoints is null)
+            {
+                return ToJs(engine, new
+                {
+                    ok = false,
+                    rows = Array.Empty<object>(),
+                    columns = Array.Empty<string>(),
+                    truncated = false,
+                    error = "Endpoints are not available in this run."
+                });
+            }
+
+            var bag = JsToDictionary(parameters, engine);
+            var result = _endpoints.RunAsync(slug, bag, CancellationToken.None).GetAwaiter().GetResult();
+
+            return ToJs(engine, new
+            {
+                ok = result.Ok,
+                rows = result.Rows,
+                columns = result.Columns,
+                truncated = result.Truncated,
+                error = result.Error
+            });
+        }));
+
         engine.SetValue("__record", new Action<string>(text =>
         {
             if (messages.Count < 50) messages.Add(text ?? string.Empty);
@@ -162,6 +201,7 @@ public sealed class ScriptHost
             var ctx, api, ui, utils;
             (function () {
               var query = __query;
+              var callEndpoint = __callEndpoint;
               var record = __record;
               var formData = __form;
 
@@ -183,7 +223,8 @@ public sealed class ScriptHost
               };
 
               api = Object.freeze({
-                query: function (queryKey, params) { return query(queryKey, params || {}); }
+                query: function (queryKey, params) { return query(queryKey, params || {}); },
+                callEndpoint: function (slug, params) { return callEndpoint(String(slug), params || {}); }
               });
 
               ui = Object.freeze({
@@ -233,6 +274,7 @@ public sealed class ScriptHost
 
         // Close the private doors. The closures above already hold what they need.
         engine.SetValue("__query", JsValue.Undefined);
+        engine.SetValue("__callEndpoint", JsValue.Undefined);
         engine.SetValue("__record", JsValue.Undefined);
         engine.SetValue("__form", JsValue.Undefined);
         engine.SetValue("__value", JsValue.Undefined);
